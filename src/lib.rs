@@ -50,6 +50,14 @@ struct Args {
     /// Preload all graph images
     #[arg(long, default_value = "false")]
     preload: bool,
+
+    /// Enable automatic refresh of repository data
+    #[arg(long)]
+    auto_refresh: bool,
+
+    /// Auto-refresh interval in seconds [default: 5]
+    #[arg(long, value_name = "SECONDS")]
+    auto_refresh_interval: Option<u64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum, Deserialize)]
@@ -149,27 +157,15 @@ pub fn run() -> Result<()> {
 
     let graph_color_set = color::GraphColorSet::new(&graph_config.color);
 
-    let repository = git::Repository::load(Path::new("."), order, max_count)?;
-
-    let graph = graph::calc_graph(&repository);
-
-    let cell_width_type = check::decide_cell_width_type(&graph, graph_width)?;
-
-    let graph_image_manager = GraphImageManager::new(
-        &graph,
-        &graph_color_set,
-        cell_width_type,
-        graph_style,
-        image_protocol,
-        args.preload,
-    );
+    // CLI args override config file settings
+    let auto_refresh = args.auto_refresh || core_config.option.auto_refresh;
+    let auto_refresh_interval = args
+        .auto_refresh_interval
+        .unwrap_or(core_config.option.auto_refresh_interval_secs);
 
     let mut terminal = ratatui::init();
 
-    let (tx, rx) = event::init(
-        core_config.option.auto_refresh,
-        core_config.option.auto_refresh_interval_secs,
-    );
+    let (tx, rx) = event::init(auto_refresh, auto_refresh_interval);
 
     let result = loop {
         let repository = git::Repository::load(Path::new("."), order, max_count)?;

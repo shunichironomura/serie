@@ -19,6 +19,17 @@ When triggered, Serie will:
 Serie can now automatically refresh repository data at regular intervals.
 
 #### Configuration
+
+**Via Command-Line (takes priority):**
+```bash
+# Enable auto-refresh with default 5-second interval
+serie --auto-refresh
+
+# Enable auto-refresh with custom interval
+serie --auto-refresh --auto-refresh-interval 10
+```
+
+**Via Config File:**
 Add the following to your `~/.config/serie/config.toml`:
 
 ```toml
@@ -27,7 +38,10 @@ auto_refresh = true                    # Enable auto-refresh (default: false)
 auto_refresh_interval_secs = 5         # Refresh every 5 seconds (default: 5)
 ```
 
-**Note:** Auto-refresh is disabled by default to maintain backward compatibility.
+**Note:** 
+- Auto-refresh is disabled by default to maintain backward compatibility
+- Command-line flags override config file settings
+- `--auto-refresh-interval` can be used without `--auto-refresh` if auto-refresh is enabled in config
 
 ## Technical Details
 
@@ -57,6 +71,8 @@ auto_refresh_interval_secs = 5         # Refresh every 5 seconds (default: 5)
    - Restructured to support refresh loop
    - Repository, graph, and app are now recreated on each refresh
    - Terminal instance is preserved across refreshes
+   - Added `--auto-refresh` and `--auto-refresh-interval` CLI flags
+   - CLI flags take priority over config file settings
 
 ### Refresh Flow
 
@@ -99,18 +115,37 @@ Same flow as manual refresh
 ### Manual Refresh Only (Default)
 No configuration needed. Just press `r` or `F5` in the application.
 
-### Auto-Refresh Every 10 Seconds
+```bash
+serie
+```
+
+### Auto-Refresh via CLI
+```bash
+# Auto-refresh every 5 seconds (default)
+serie --auto-refresh
+
+# Auto-refresh every 10 seconds
+serie --auto-refresh --auto-refresh-interval 10
+
+# Auto-refresh every 30 seconds
+serie --auto-refresh --auto-refresh-interval 30
+```
+
+### Auto-Refresh via Config File
 ```toml
+# ~/.config/serie/config.toml
 [core.option]
 auto_refresh = true
 auto_refresh_interval_secs = 10
 ```
 
-### Auto-Refresh Every 30 Seconds
-```toml
-[core.option]
-auto_refresh = true
-auto_refresh_interval_secs = 30
+### Mixed Configuration (CLI overrides config)
+```bash
+# Even if config has auto_refresh = false, this enables it:
+serie --auto-refresh
+
+# Override the interval from config:
+serie --auto-refresh-interval 15
 ```
 
 ## Use Cases
