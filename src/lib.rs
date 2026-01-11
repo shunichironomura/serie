@@ -14,7 +14,7 @@ mod widget;
 
 use std::path::Path;
 
-use app::App;
+use app::{App, AppResult};
 use clap::{Parser, ValueEnum};
 use graph::GraphImageManager;
 use serde::Deserialize;
@@ -166,24 +166,48 @@ pub fn run() -> Result<()> {
 
     let mut terminal = ratatui::init();
 
-    let (tx, rx) = event::init();
-
-    let mut app = App::new(
-        &repository,
-        graph_image_manager,
-        &graph,
-        &key_bind,
-        &core_config,
-        &ui_config,
-        &color_theme,
-        &graph_color_set,
-        cell_width_type,
-        image_protocol,
-        initial_selection,
-        tx,
+    let (tx, rx) = event::init(
+        core_config.option.auto_refresh,
+        core_config.option.auto_refresh_interval_secs,
     );
-    let ret = app.run(&mut terminal, rx);
+
+    let result = loop {
+        let repository = git::Repository::load(Path::new("."), order, max_count)?;
+
+        let graph = graph::calc_graph(&repository);
+
+        let cell_width_type = check::decide_cell_width_type(&graph, graph_width)?;
+
+        let graph_image_manager = GraphImageManager::new(
+            &graph,
+            &graph_color_set,
+            cell_width_type,
+            graph_style,
+            image_protocol,
+            args.preload,
+        );
+
+        let mut app = App::new(
+            &repository,
+            graph_image_manager,
+            &graph,
+            &key_bind,
+            &core_config,
+            &ui_config,
+            &color_theme,
+            &graph_color_set,
+            cell_width_type,
+            image_protocol,
+            initial_selection,
+            tx.clone(),
+        );
+
+        match app.run(&mut terminal, rx.clone())? {
+            AppResult::Quit => break Ok(()),
+            AppResult::Refresh => continue,
+        }
+    };
 
     ratatui::restore();
-    ret.map_err(Into::into)
+    result
 }

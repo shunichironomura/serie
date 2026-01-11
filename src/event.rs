@@ -14,6 +14,7 @@ pub enum AppEvent {
     Key(KeyEvent),
     Resize(usize, usize),
     Quit,
+    Refresh,
     OpenDetail,
     CloseDetail,
     ClearDetail,
@@ -54,20 +55,32 @@ impl Debug for Sender {
     }
 }
 
+use std::sync::{Arc, Mutex};
+
 pub struct Receiver {
-    rx: mpsc::Receiver<AppEvent>,
+    rx: Arc<Mutex<mpsc::Receiver<AppEvent>>>,
+}
+
+impl Clone for Receiver {
+    fn clone(&self) -> Self {
+        Self {
+            rx: Arc::clone(&self.rx),
+        }
+    }
 }
 
 impl Receiver {
     pub fn recv(&self) -> AppEvent {
-        self.rx.recv().unwrap()
+        self.rx.lock().unwrap().recv().unwrap()
     }
 }
 
-pub fn init() -> (Sender, Receiver) {
+pub fn init(auto_refresh: bool, auto_refresh_interval_secs: u64) -> (Sender, Receiver) {
     let (tx, rx) = mpsc::channel();
     let tx = Sender { tx };
-    let rx = Receiver { rx };
+    let rx = Receiver {
+        rx: Arc::new(Mutex::new(rx)),
+    };
 
     let event_tx = tx.clone();
     thread::spawn(move || loop {
@@ -86,6 +99,14 @@ pub fn init() -> (Sender, Receiver) {
             }
         }
     });
+
+    if auto_refresh {
+        let refresh_tx = tx.clone();
+        thread::spawn(move || loop {
+            thread::sleep(std::time::Duration::from_secs(auto_refresh_interval_secs));
+            refresh_tx.send(AppEvent::Refresh);
+        });
+    }
 
     (tx, rx)
 }
@@ -126,6 +147,7 @@ pub enum UserEvent {
     FuzzyToggle,
     ShortCopy,
     FullCopy,
+    Refresh,
     Unknown,
 }
 
@@ -188,6 +210,7 @@ impl<'de> Deserialize<'de> for UserEvent {
                         "fuzzy_toggle" => Ok(UserEvent::FuzzyToggle),
                         "short_copy" => Ok(UserEvent::ShortCopy),
                         "full_copy" => Ok(UserEvent::FullCopy),
+                        "refresh" => Ok(UserEvent::Refresh),
                         _ => {
                             let msg = format!("Unknown user event: {}", value);
                             Err(de::Error::custom(msg))

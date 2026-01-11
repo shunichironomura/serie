@@ -32,9 +32,15 @@ enum StatusLine {
     NotificationError(String),
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum InitialSelection {
     Latest,
     Head,
+}
+
+pub enum AppResult {
+    Quit,
+    Refresh,
 }
 
 #[derive(Debug)]
@@ -127,7 +133,7 @@ impl App<'_> {
         &mut self,
         terminal: &mut Terminal<B>,
         rx: Receiver,
-    ) -> Result<(), B::Error> {
+    ) -> Result<AppResult, B::Error> {
         loop {
             terminal.draw(|f| self.render(f))?;
             match rx.recv() {
@@ -163,6 +169,9 @@ impl App<'_> {
                         Some(UserEvent::ForceQuit) => {
                             self.tx.send(AppEvent::Quit);
                         }
+                        Some(UserEvent::Refresh) => {
+                            self.tx.send(AppEvent::Refresh);
+                        }
                         Some(ue) => {
                             let event_with_count =
                                 process_numeric_prefix(&self.numeric_prefix, *ue, key);
@@ -193,8 +202,11 @@ impl App<'_> {
                 AppEvent::Resize(w, h) => {
                     let _ = (w, h);
                 }
+                AppEvent::Refresh => {
+                    return Ok(AppResult::Refresh);
+                }
                 AppEvent::Quit => {
-                    return Ok(());
+                    return Ok(AppResult::Quit);
                 }
                 AppEvent::OpenDetail => {
                     self.open_detail();
