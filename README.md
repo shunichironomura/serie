@@ -1,6 +1,6 @@
 # Serie
 
-> [!INFO]
+> [!NOTE]
 > This is a vibe-coded fork of [lusingander/serie](https://github.com/lusingander/serie) with refresh feature.
 
 ---
