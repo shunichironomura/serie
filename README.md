@@ -1,5 +1,10 @@
 # Serie
 
+> [!NOTE]
+> This is a fork of [lusingander/serie](https://github.com/lusingander/serie) with auto-refresh feature.
+
+---
+
 [![Crate Status](https://img.shields.io/crates/v/serie.svg)](https://crates.io/crates/serie)
 [![Built With Ratatui](https://img.shields.io/badge/Built_With-Ratatui-000?logo=ratatui&logoColor=fff&labelColor=000&color=fff)](https://ratatui.rs)
 
