@@ -126,6 +126,10 @@ pub struct CoreOptionConfig {
     pub graph_width: Option<GraphWidthType>,
     pub graph_style: Option<GraphStyle>,
     pub initial_selection: Option<InitialSelection>,
+    #[default = false]
+    pub auto_refresh: bool,
+    #[default = 5]
+    pub auto_refresh_interval_secs: u64,
 }
 
 #[optional(derives = [Deserialize])]
@@ -424,6 +428,8 @@ mod tests {
                     graph_width: None,
                     graph_style: None,
                     initial_selection: None,
+                    auto_refresh: false,
+                    auto_refresh_interval_secs: 5,
                 },
                 search: CoreSearchConfig {
                     ignore_case: false,
@@ -548,6 +554,8 @@ mod tests {
                     graph_width: Some(GraphWidthType::Single),
                     graph_style: Some(GraphStyle::Angular),
                     initial_selection: Some(InitialSelection::Head),
+                    auto_refresh: false,
+                    auto_refresh_interval_secs: 5,
                 },
                 search: CoreSearchConfig {
                     ignore_case: true,
@@ -656,6 +664,8 @@ mod tests {
                     graph_width: None,
                     graph_style: None,
                     initial_selection: None,
+                    auto_refresh: false,
+                    auto_refresh_interval_secs: 5,
                 },
                 search: CoreSearchConfig {
                     ignore_case: false,

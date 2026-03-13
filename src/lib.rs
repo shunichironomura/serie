@@ -50,6 +50,14 @@ struct Args {
     /// Preload all graph images
     #[arg(long, default_value = "false")]
     preload: bool,
+
+    /// Enable automatic refresh of repository data
+    #[arg(long)]
+    auto_refresh: bool,
+
+    /// Auto-refresh interval in seconds [default: 5]
+    #[arg(long, value_name = "SECONDS")]
+    auto_refresh_interval: Option<u64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum, Deserialize)]
@@ -149,6 +157,11 @@ pub fn run() -> Result<()> {
 
     let graph_color_set = color::GraphColorSet::new(&graph_config.color);
 
+    let auto_refresh = args.auto_refresh || core_config.option.auto_refresh;
+    let auto_refresh_interval = args
+        .auto_refresh_interval
+        .unwrap_or(core_config.option.auto_refresh_interval_secs);
+
     let ctx = Rc::new(app::AppContext {
         keybind,
         core_config,
@@ -157,7 +170,7 @@ pub fn run() -> Result<()> {
         image_protocol,
     });
 
-    let ec = event::EventController::init();
+    let ec = event::EventController::init(auto_refresh, auto_refresh_interval);
     let mut refresh_view_context = None;
     let mut terminal = None;
 
