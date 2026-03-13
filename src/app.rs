@@ -264,6 +264,9 @@ impl App<'_> {
                 AppEvent::CopyToClipboard { name, value } => {
                     self.copy_to_clipboard(name, value);
                 }
+                AppEvent::AutoRefresh => {
+                    self.view.refresh();
+                }
                 AppEvent::Refresh(context) => {
                     self.cleanup_graph_images()?;
                     let request = RefreshRequest { context };

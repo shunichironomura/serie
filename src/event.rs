@@ -20,6 +20,7 @@ pub enum AppEvent {
     Key(KeyEvent),
     Resize(usize, usize),
     Quit,
+    AutoRefresh,
     OpenDetail,
     CloseDetail,
     OpenUserCommand(usize),
@@ -80,19 +81,29 @@ pub struct EventController {
     rx: Receiver,
     stop: Arc<AtomicBool>,
     handle: Arc<Mutex<Option<thread::JoinHandle<()>>>>,
+    auto_refresh_interval: Option<std::time::Duration>,
+    auto_refresh_handle: Arc<Mutex<Option<thread::JoinHandle<()>>>>,
 }
 
 impl EventController {
-    pub fn init() -> Self {
+    pub fn init(auto_refresh: bool, auto_refresh_interval_secs: u64) -> Self {
         let (tx, rx) = mpsc::channel();
         let tx = Sender { tx };
         let rx = Receiver { rx };
+
+        let auto_refresh_interval = if auto_refresh {
+            Some(std::time::Duration::from_secs(auto_refresh_interval_secs))
+        } else {
+            None
+        };
 
         let controller = EventController {
             tx: tx.clone(),
             rx,
             stop: Arc::new(AtomicBool::new(false)),
             handle: Arc::new(Mutex::new(None)),
+            auto_refresh_interval,
+            auto_refresh_handle: Arc::new(Mutex::new(None)),
         };
         controller.start();
 
@@ -131,6 +142,29 @@ impl EventController {
             }
         });
         *self.handle.lock().unwrap() = Some(handle);
+
+        if let Some(interval) = self.auto_refresh_interval {
+            let stop = self.stop.clone();
+            let tx = self.tx.clone();
+            let handle = thread::spawn(move || {
+                while !stop.load(Ordering::Relaxed) {
+                    // Sleep in small increments to check the stop flag promptly
+                    let mut elapsed = std::time::Duration::ZERO;
+                    let tick = std::time::Duration::from_millis(100);
+                    while elapsed < interval {
+                        if stop.load(Ordering::Relaxed) {
+                            return;
+                        }
+                        thread::sleep(tick.min(interval - elapsed));
+                        elapsed += tick;
+                    }
+                    if !stop.load(Ordering::Relaxed) {
+                        tx.send(AppEvent::AutoRefresh);
+                    }
+                }
+            });
+            *self.auto_refresh_handle.lock().unwrap() = Some(handle);
+        }
     }
 
     pub fn resume(&self) {
@@ -159,6 +193,9 @@ impl EventController {
     fn stop(&self) {
         self.stop.store(true, Ordering::Relaxed);
         if let Some(handle) = self.handle.lock().unwrap().take() {
+            handle.join().unwrap();
+        }
+        if let Some(handle) = self.auto_refresh_handle.lock().unwrap().take() {
             handle.join().unwrap();
         }
     }
