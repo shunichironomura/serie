@@ -194,6 +194,8 @@ pub fn run() -> Result<()> {
             terminal = Some(ratatui::init());
         }
 
+        let fingerprint = git::repository_fingerprint(Path::new("."));
+
         let mut app = App::new(
             &repository,
             graph_image_manager,
@@ -204,6 +206,7 @@ pub fn run() -> Result<()> {
             ctx.clone(),
             &ec,
             refresh_view_context,
+            fingerprint,
         );
 
         match app.run(terminal.as_mut().unwrap()) {

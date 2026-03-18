@@ -17,7 +17,7 @@ use crate::{
     external::{
         copy_to_clipboard, exec_user_command, exec_user_command_suspend, ExternalCommandParameters,
     },
-    git::{Commit, FileChange, Head, Ref, Repository},
+    git::{self, Commit, FileChange, Head, Ref, Repository},
     graph::{CellWidthType, Graph, GraphImageManager},
     keybind::KeyBind,
     protocol::ImageProtocol,
@@ -75,6 +75,7 @@ pub struct App<'a> {
     app_status: AppStatus,
     ctx: Rc<AppContext>,
     ec: &'a EventController,
+    last_fingerprint: String,
 }
 
 impl<'a> App<'a> {
@@ -88,6 +89,7 @@ impl<'a> App<'a> {
         ctx: Rc<AppContext>,
         ec: &'a EventController,
         refresh_view_context: Option<RefreshViewContext>,
+        fingerprint: String,
     ) -> Self {
         let mut ref_name_to_commit_index_map = FxHashMap::default();
         let commits = graph
@@ -133,6 +135,7 @@ impl<'a> App<'a> {
             app_status: AppStatus::default(),
             ctx,
             ec,
+            last_fingerprint: fingerprint,
         };
 
         if let Some(context) = refresh_view_context {
@@ -262,7 +265,11 @@ impl App<'_> {
                     self.copy_to_clipboard(name, value);
                 }
                 AppEvent::AutoRefresh => {
-                    self.view.refresh();
+                    let current = git::repository_fingerprint(std::path::Path::new("."));
+                    if current != self.last_fingerprint {
+                        self.last_fingerprint = current;
+                        self.view.refresh();
+                    }
                 }
                 AppEvent::Refresh(context) => {
                     let request = RefreshRequest { context };
