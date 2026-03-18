@@ -665,6 +665,17 @@ pub fn get_diff_summary(path: &Path, commit_hash: &CommitHash) -> Vec<FileChange
     changes
 }
 
+pub fn repository_fingerprint(path: &Path) -> String {
+    let output = Command::new("git")
+        .arg("show-ref")
+        .arg("--head")
+        .arg("--hash")
+        .current_dir(path)
+        .output()
+        .unwrap();
+    String::from_utf8_lossy(&output.stdout).into_owned()
+}
+
 pub fn get_initial_commit_additions(path: &Path, commit_hash: &CommitHash) -> Vec<FileChange> {
     let mut cmd = Command::new("git")
         .arg("ls-tree")
